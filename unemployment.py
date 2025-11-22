@@ -3,6 +3,7 @@ import kagglehub as kh
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.seasonal import seasonal_decompose
+import numpy as np
 
 # Baixar datasets
 path = kh.dataset_download("marcelomizuno/unemployment-rates")
@@ -94,5 +95,77 @@ plt.show()
 
 # Decompose Time Series
 
+#print(df_general[infl_cols])
+#print(df_general[unemp_cols])
 
+for country_infl, country_unemp in zip(infl_cols, unemp_cols):
+    serie1 = df_general[country_infl].copy()
+    serie2 = df_general[country_unemp].copy()
 
+    # Muitos NaNs, por isso é necessario preencher os NaNs com interpolação temporal
+    serie1 = serie1.interpolate(method='time').ffill().bfill()
+    serie2 = serie2.interpolate(method='time').ffill().bfill()
+
+    # Transformação log para inflação alta (Brasil principal caso)
+    log_applied_1 = False
+    if serie1.max() > 20:
+        serie1 = np.log1p(serie1)
+        log_applied_1 = True
+
+    # Definindo o período baseado na frequência dos dados
+    freq = pd.infer_freq(df_general.index)
+
+    if freq == 'A' or freq == 'Y':
+        period = 2
+    elif freq == 'M':
+        period = 12
+    else:
+        period = 2
+
+    #  Decomposição com extrapolate_trend pra evitar NaNs
+    decomp_infl = seasonal_decompose(
+        serie1,
+        model='additive',
+        period=period,
+        extrapolate_trend='freq'  # Vai evitar o Nan
+    )
+
+    fig1 = decomp_infl.plot()
+    if log_applied_1: log_note = "(escala log aplicada)"
+    else: log_note = ""
+
+    fig1.suptitle(f"Decomposição Inflação — {country_infl}{log_note}")
+    plt.tight_layout()
+
+    decomp_unemp = seasonal_decompose(
+        serie2,
+        model='additive',
+        period=period,
+        extrapolate_trend='freq'  # Vai evitar o Nan
+    )
+
+    fig2 = decomp_unemp.plot()
+    fig2.suptitle(f"Decomposição Desemprego — {country_unemp}")
+    plt.tight_layout()
+    plt.show()
+
+    # Print de infos de geral
+    print(f"\nPaís: {country_infl.replace('_infl', '')}")
+    print(f"Período usado: {period}")
+
+'''
+Perguntas:
+a. A série possui Tendência? Se sim, que tipo?
+b. A série possui Sazonalidade? Se sim, qual o período que ela acontece?
+c. A série apresenta um Ciclo? Se sim, por qual razão?
+
+Análise série 1:
+a. 
+b. 
+c. 
+
+Análise série 2:
+a. 
+b. 
+c. 
+'''
