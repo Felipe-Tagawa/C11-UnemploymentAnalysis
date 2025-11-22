@@ -153,6 +153,45 @@ for country_infl, country_unemp in zip(infl_cols, unemp_cols):
     print(f"\nPaís: {country_infl.replace('_infl', '')}")
     print(f"Período usado: {period}")
 
+
+# Decompor cada país do dataset original de desemprego
+for country in df_unemp.columns:
+    # Tratar NaNs
+    serie_unemp_original = df_unemp[country].interpolate(method='time').ffill().bfill()
+
+    # Decomposição
+    decomp_original = seasonal_decompose(
+        serie_unemp_original,
+        model='additive',
+        period=12,
+        extrapolate_trend='freq'
+    )
+
+    if country != 'Brazil':
+        fig = decomp_original.plot()
+        fig.suptitle(f"Decomposição Desemprego Original — {country}", fontsize=14, fontweight='bold')
+
+    # Brasil: Apenas 2012-2024
+    else:
+        serie_brazil_filtered = df_unemp[country].loc['2012':'2024'].interpolate(method='time').ffill().bfill()
+
+        decomp_brazil_filtered = seasonal_decompose(
+            serie_brazil_filtered,
+            model='additive',
+            period=12,
+            extrapolate_trend='freq'
+        )
+
+        fig_brazil = decomp_brazil_filtered.plot()
+        fig_brazil.suptitle(f"Decomposição Desemprego — {country} (2012-2024)", fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+
+    plt.tight_layout()
+    plt.show()
+
+
+
 '''
 Perguntas:
 a. A série possui Tendência? Se sim, que tipo?
